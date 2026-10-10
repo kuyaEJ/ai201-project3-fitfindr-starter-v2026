@@ -68,34 +68,6 @@ CATEGORY_SIZE_TOKENS = {
 
 SIZE_ORDER = ["s", "m", "l", "xl", "os", "7", "8", "8.5", "9", "27", "28", "29", "30", "32"]
 
-# def _keywords(text: str) -> set[str]:
-#     """lowercase words worth matching on, stopword removed."""
-#     words = re.findall(r"[a-z0-9']+", (text or "").lower())
-#     return {w for w in words if w not in _STOPWORDS and len(w) > 1}
-
-# def _size_tokens(size: str) -> set[str]:
-#     cleaned = re.sub(r"\([^)]*\)", " ", size or "") # drop parentheticals
-#     parts = [p.strip().upper for p in cleaned.split("/")]
-#     return {p for p in parts if p}
-
-# def _size_matches(wanted: str, listing_size: str) -> bool:
-#     if not wanted:
-#         return True
-#     listing_tokens = _size_tokens(listing_size)
-#     if any(token.startswith("ONE SIZE") for token in listing_tokens):
-#         return True
-#     return bool(_size_tokens(wanted) * listing_tokens)
-
-def load_listings() -> list[dict]:
-    import json
-    d = ""
-    with open('data/listings.json', 'r', encoding='utf-8') as file:
-        listings = json.load(file)
-        converttostring = json.dumps(listings)
-        d = json.loads( converttostring )
-    return d
-
-
 def find_size_in_text(text: str, category: dict) -> str | None:
     """Finds known categories of size tokens/words in any text string."""
     KEY_ALIASES = {
@@ -107,16 +79,15 @@ def find_size_in_text(text: str, category: dict) -> str | None:
     }
     if not text:
         return None
+    
     for key in KEY_ALIASES:
         isBut =  text.split('but')[1] if len(text.split('but')) > 1 else text
-        # print(f"Looking for the key `{key}` in \"{isBut.strip()}\"...")
-        # print(re.search(r'\b' + re.escape(key) + r'\b', isBut, re.IGNORECASE))
+
         if ' but ' in text:
             if re.search(r'\b' + re.escape(key) + r'\b', isBut, re.IGNORECASE):
-                # print(f"Returning alias {KEY_ALIASES.get(key) if category.get(KEY_ALIASES.get(key)) else None}")
                 return KEY_ALIASES.get(key) if category.get(KEY_ALIASES.get(key)) else None
+        
         if re.search(r'\b' + re.escape(key) + r'\b', isBut, re.IGNORECASE):
-            # print(f"Returning alias {KEY_ALIASES.get(key) if category.get(KEY_ALIASES.get(key)) else None}")
             return KEY_ALIASES.get(key) if category.get(KEY_ALIASES.get(key)) else None
     return None
 
@@ -131,49 +102,35 @@ def extract_fit_size(description: str, category: dict) -> str | None:
     )
 
     clauses = re.split(r'[.;!]', description.lower())
-    # print(f"Description")
-    # print(f"    {clauses[0]}")
-    # print(f"    {clauses[1]}")
-    # print(f"    {clauses[2]}")
-    # print(f"    {clauses[3]}")
 
     for clause in clauses:
         if FIT_TRIGGER_PATTERN.search(clause):
             extracted_size = find_size_in_text(clause, category)
             if extracted_size:
-                # print(f"     {extracted_size}")
                 return extracted_size
 
     return None
 
-def extract_target_size(query_or_filter: str, category: str) -> str | None:
+def extract_target_size(query_or_filter: str, category: dict) -> str | None:
     """Reuses find_size_in_text to get target size from query or filter string."""
     return find_size_in_text(query_or_filter, category)
 
 
-def get_base_size(category: str, raw_size: str) -> str | None:
+def get_base_size(category: dict, raw_size: str) -> str | None:
     """Finds which standard base size key (e.g. 's', 'm') a raw size string belongs to."""
     if not raw_size:
         return None
 
     raw = raw_size.strip().lower()
 
-    cat_map = CATEGORY_SIZE_TOKENS.get(category.lower(), {})
-    for key, tokens in cat_map.items():
-        # print(f"get_base_size::CATEGORY_SIZE_TOKENS.get({category}[{key}])")
-        # print(f"     Index Size:      {key}")
-        # print(f"     Aliases:         {tokens}")
-        # print(f"     Item Size:       {raw}")
-        # print(f"     [Category Token Matches][Size Token Matches]:")
-        # print(f"               {raw in tokens}               {key in SIZE_ORDER}")
+    for key, tokens in category.items():
         if raw in tokens and key in SIZE_ORDER:
-            # print("\n\nFOUND KEY\n\n")
             return key
 
     return None
 
 
-def compareSizes(category: str, item_size: str, target_size: str) -> float:
+def compareSizes(category: dict, item_size: str, target_size: str) -> float:
     """
     Dynamically compares item_size (base) to target_size across size distances:
     - 3.0 pts: Exact size match (distance 0)
@@ -206,7 +163,7 @@ def compareSizes(category: str, item_size: str, target_size: str) -> float:
     return 0.0
 
 
-def scoreSize(category: str, listing: dict, target_size: str | None) -> float:
+def scoreSize(category: dict, listing: dict, target_size: str | None) -> float:
     # If buyer specified no size preference, do not add or subtract size points
     if not target_size or target_size.strip() == "":
         return 0.0
@@ -272,64 +229,60 @@ def search_listings(
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
     # TODO: replace this with your implementation
-    index = 0
+    # If max price is 0 returns empty list since no items will be $0
+    if max_price is not None:
+        if max_price <= 0: return []
+
     BM25SearchEngine = keywordScore.BM25SearchEngine
     listings = load_listings()
     if not listings: return []
 
-    # if not description:
-    #     print(f"\nNo matching description in string"
-    #           f"\nPlease enter a valid description i.e. 'white striped pants 30W under $40'\n")
-    #     return []
-    # if not size:
-    #     print(f"No size matching in string"
-    #           f"\nPlease enter a valid size i.e. 'small shirt'\n")
-    #     return []
-    # if not max_price:
-    #     print(f"\n0 is not a valid price range"
-    #           f"\nPlease enter a valid price range i.e under $30.\n")
-    #     return []
-
     # B. Calculate Text Relevance Scores using BM25 Engine
     engine = BM25SearchEngine(listings)
-    text_scores = engine.get_text_scores(description)
+    
+    text_scores = 0
+    if description: text_scores = engine.get_text_scores(description)
     
     matches = []
     for idx, listing in enumerate(listings):
         score = 0
 
-        # Check price and skip if it is above max_price
-        item_price = listing.get('price')
-        item_category = listing.get('category')
-        item_desc = listing.get('description')
-        item_size = listing.get('size')
-
-        item_sz = get_base_size(item_category, item_size)
-        c = CATEGORY_SIZE_TOKENS.get(item_category)
-
-        target_size = size if size else extract_fit_size(item_desc, c)
-        if max_price > 0 and item_price > max_price: continue;
+        price_score = 0
+        if max_price != None:
+            item_price = listing.get('price')
+            # Check price and skip if it is above max_price
+            if item_price > max_price: continue;
+            # Lower prices get higher scores
+            price_score = .5 * (max_price / item_price);
         
-        base_text_score = text_scores[idx]
-        size_score = scoreSize(c, listing, target_size)
-        score = base_text_score + size_score
+        size_score = 0
+        if size is not None:
+            item_desc = listing.get('description')
+            item_category = listing.get('category')
+            c = CATEGORY_SIZE_TOKENS.get(item_category)
+            target_size = size if size else extract_fit_size(item_desc, c)
+        
+            size_score = scoreSize(c, listing, target_size)
 
-        if score != 0 and index < config.SEARCH_RESULT_LIMIT:
-            index += 1
-            matches.append({'id':listing.get('id'), 'score':round(score, 2), 'price':f"price is inclusive to {max_price}" if max_price else "no price cap", 'listing':listing})
-    # used ai to help me understand how to use sort(key=lambda x: x['score'])
-    return matches if matches.sort(key=lambda x: x['score'], reverse=True) == None else []
+        base_text_score = 0
+        if text_scores:
+            base_text_score = text_scores[idx]
 
-# lists = search_listings("y2k cute vintage graphic tee", "", 30
-# print(lists[0].get('score'))
-# print(lists)
-# for i in lists:
-#     print(i)
-#     print()
-# print("Found", len(lists), "items from listings that matched.\n")
-# print("Highest score:", lists[0].get('score'), "from", lists[0].get('id'))
-# print("Average score:", f"{sum([int(i.get('score')) for i in lists])/len(lists):.2f}")
-# print("Lowest score:", lists[len(lists)-1].get('score'), "from", lists[len(lists)-1].get('id'))
+        score = base_text_score + size_score + price_score
+
+        if score != 0:
+            matches.append({'score':score, 'listing':listing})
+    
+    
+    matches.sort(key=lambda x: x['score'], reverse=True)
+    # Remove scores from return list to maintain shape
+    top_matches = []
+    index = 0
+    for dictionary in matches: 
+        if index < config.SEARCH_RESULT_LIMIT:
+            top_matches.append(dictionary['listing'])
+            index+=1
+    return top_matches
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
 
@@ -366,10 +319,10 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     wardrobe_items = wardrobe.get("items", []) if wardrobe else []
 
     # Format new item details
-    item_title = new_item.get("title", "Item")
-    item_cat = new_item.get("category", "")
-    item_tags = ", ".join(new_item.get("style_tags", []))
-    item_desc = new_item.get("description", "")
+    item_title = new_item['title']
+    item_cat = new_item.get("category", "") or new_item['category']
+    item_tags = ", ".join(new_item.get("style_tags", [])) or ", ".join(new_item['style_tags'], [])
+    item_desc = new_item.get("description", "") or new_item['description']
 
     item_info = (
         f"NEW ITEM TO STYLE:\n"
@@ -442,10 +395,6 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
         else f"General styling advice for {item_title}: Pair with neutral basics and complementary layers."
     )
 
-# from utils.data_loader import get_example_wardrobe
-# outfits = suggest_outfit(load_listings()[0], get_example_wardrobe())
-# print(outfits)
-
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
 
 def create_fit_card(outfit: str, new_item: dict) -> str:
@@ -485,17 +434,17 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     # TODO: replace this with your implementation
     # 1. Guard against empty or whitespace-only outfit input
     if not outfit or not outfit.strip():
-        title = new_item.get("title", "thrift find")
-        price = new_item.get("price", "bargain")
-        platform = new_item.get("platform", "the shop")
+        title = new_item["title"] or "thrift find"
+        price = new_item["price"] or "bargain"
+        platform = new_item["platform"] or "the shop"
         return f"Just scored this amazing {title} for ${price} on {platform}! Can't wait to style it into a casual weekend outfit."
 
     # Extract metadata required by the spec
-    title = new_item.get("title", "Item")
-    price = new_item.get("price", "")
-    platform = new_item.get("platform", "online")
-    style_tags = ", ".join(new_item.get("style_tags", []))
-    condition = new_item.get("condition", "")
+    title = new_item["title"] or "Item"
+    price = new_item["price"] or ""
+    platform = new_item["platform"] or "online"
+    style_tags = ", ".join(new_item["style_tags"] or [])
+    condition = new_item["condition"] or ""
 
     # 2. Construct the prompt
     system_instruction = (
@@ -534,6 +483,3 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
         return f"Obsessed with this {title} I picked up for ${price} on {platform}! The vibe is immaculate and it pairs so well with {outfit[:30]}..."
 
     return response.strip()
-
-
-# print(create_fit_card(outfits, load_listings()[0]))
