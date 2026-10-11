@@ -144,32 +144,36 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
         # Step 2: Parse Query
         session["parsed"] = parse_query(query)
-        parsed = session["parsed"]
-        # trace.step("parse_query", inputs={"query": query}, returned=parsed)
+        trace.step("parse_query", inputs={"query": query}, returned=session["parsed"])
 
 
         # Step 3: Search Listings
         # Extract parsed components for search_listings(query, size_filter, max_price)
-        search_query = parsed.get("description")
-        size_filter = parsed.get("size")
-        max_price = parsed.get("max_price")
+        search_query = session["parsed"].get("description")
+        size_filter = session["parsed"].get("size")
+        max_price = session["parsed"].get("max_price")
+
+        from mcp_client import call_tool
+        results = call_tool("search_listings", {
+            "description": search_query,
+            "size": size_filter,
+            "max_price": max_price,
+        })
 
         if not search_query:
             session["error"] = (
                 f"No items matching search for empty query"
                 f"\nPlease enter a non-empty search requirement"
             )
-            return session["error"]
+            return session
 
-        session["search_results"] = search_listings(search_query, size_filter, max_price)
-        results = session["search_results"]
-        if results == []:
-            print("Recieved empty string. Query might have returned empty")
-        # trace.step(
-        #     "search_listings", 
-        #     inputs={"query": search_query, "size_filter": size_filter, "max_price": max_price}, 
-        #     returned=f"Found {len(results)} items"
-        # )
+        session["search_results"] = results
+        
+        trace.step(
+            "search_listings", 
+            inputs={"query": search_query, "size_filter": size_filter, "max_price": max_price}, 
+            returned=f"Found {len(results)} items"
+        )
 
         # Step 4: THE BRANCH (Guard against empty search results)
         if not results:
@@ -179,53 +183,53 @@ def run_agent(query: str, wardrobe: dict) -> dict:
                 f"No items matched your search for '{search_query}'{size_msg}{price_msg}. "
                 f"Try loosening your price cap, broadening your search terms, or checking for other sizes."
             )
-            return session["error"]
+            return session
 
         # Step 5: Select Item (Grab top listing dict directly)
         first_result = session["search_results"][0]
 
-        # Extract inner listing dictionary from search_listings result wrapper
-        if isinstance(first_result, dict) and "listing" in first_result:
-            selected_item = first_result["listing"]
-        else:
-            selected_item = first_result
-
-        session["selected_item"] = selected_item
+        session["selected_item"] = first_result
 
         # Trace step
-        item_title = selected_item.get("title", "Unknown Item")
-        item_price = selected_item.get("price", 0.0)
-        item_platform = selected_item.get("platform", "")
-        item_size = selected_item.get("size", "")
-        # print(item_title + str(item_price) + item_size + item_platform == title_session + str(price_session) + size_session + platform_session)
-        # trace.step(
-        #     "select_item",
-        #     inputs={"results_count": len(results)},
-        #     returned=f"{item_title} (${item_price}, {item_size}, {item_platform})"
-        # )
+        item_title = session["selected_item"].get("title", "Unknown Item")
+        item_price = session["selected_item"].get("price", 0.0)
+        item_platform = session["selected_item"].get("platform", "")
+        item_size = session["selected_item"].get("size", "")
+
+        trace.step(
+            "select_item",
+            inputs={"results_count": len(results)},
+            returned=f"{item_title} (${item_price}, {item_size}, {item_platform})"
+        )
 
         # Step 6: Suggest Outfit
         session["outfit_suggestion"] = suggest_outfit(session["selected_item"], wardrobe)
         outfit = session["outfit_suggestion"]
-        # trace.step("suggest_outfit", inputs={"item_id": selected_item.get("id")}, returned=outfit[:50] + "...")
+        trace.step("suggest_outfit", inputs={"item_id": session["selected_item"].get("id")}, returned=outfit[:50] + "...")
         
         
         title_session = session["selected_item"].get("title", "")
         price_session = session["selected_item"].get("price", 0)
         platform_session = session["selected_item"].get("platform", "")
         size_session = session["selected_item"].get("size", "")
-        assert item_title + str(item_price) + item_size + item_platform == title_session + str(price_session) + size_session + platform_session, "Failed acceptance criteria 3 this run"
+        if item_title + str(item_price) + item_size + item_platform != title_session + str(price_session) + size_session + platform_session:
+            session["error"] = (
+                "Failed acceptance criteria 3 this run. "
+                "Session item metadata fields isn't matching with the first result. "
+                "Try verifying that the session[\"selected_item\"] was updated."
+            )
+            return session
 
         # Step 7: Create Fit Card
-        session["fit_card"] = create_fit_card(outfit, selected_item)
+        session["fit_card"] = create_fit_card(outfit, session["selected_item"])
 
-        # fit_card = session["fit_card"]
-        # trace.step("create_fit_card", inputs={"item_id": selected_item.get("id")}, returned=fit_card[:50] + "...")
+        fit_card = session["fit_card"]
+        trace.step("create_fit_card", inputs={"item_id": session["selected_item"].get("id")}, returned=fit_card[:50] + "...")
 
     except ModelUnavailable as e:
         # Gracefully capture network or API issues without crashing the process
         session["error"] = f"Model service unavailable: {e}"
-        # trace.step("model_error", inputs={"query": query}, returned=str(e))
+        trace.step("model_error", inputs={"query": query}, returned=str(e))
 
     return session
 
