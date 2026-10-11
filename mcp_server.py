@@ -99,7 +99,7 @@ def search_listings(
         says "no"**
     """
     try:
-        if description == "...": print("Cannot search for empty listing. Try entering an item you want to try in an outfit or look to buy."); raise ValueError("The query cannot be empty");
+        if description == "..." or description is None or description == "": print("Cannot search for empty listing. Try entering an item you want to try in an outfit or look to buy."); raise ValueError("The description cannot be empty. Try broadening your search query. ");
         return _search_listings_impl(description, size, max_price)
     except KeyError as e:
         print(e)
