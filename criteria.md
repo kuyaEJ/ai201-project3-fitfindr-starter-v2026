@@ -38,7 +38,7 @@ The file `agent.py` has a `run_agent` method that guards and ensures listings is
 
 ## 3. The session item fields should match the tool results
 
-Given a query when `search_listings` ends, the listing should verify that `session["selected_item"]` has the same metadata fields for `id`, `title`, `price`, and `size` after the session is set. The check should pass 3 of 5 tries.
+**Target:** Given a query when `search_listings` ends, the listing should verify that `session["selected_item"]` has the same metadata fields for `id`, `title`, `price`, and `size` after the session is set. The check should pass 3 of 5 tries.
 
 <!-- YOU WRITE THIS ONE.
 
@@ -57,9 +57,20 @@ This target accounts for AI hallucinations where a typo or mistake is made. The 
 
 ---
 
-## 4. Something about the fit card
+## 4. Unique fit card captions
 
-Given a query the fit card shouldn't repeat the same caption or in other tools the AI should not add unwanted results i.e., invalid listing fields such as a wrong `id`, `title`, or a new field in 3 of 5 tries.
+**Target:** Given a query, fit card tool should not repeat the same 2 keywords in the caption in 3 of 5 tries.
+
+**Why this target:** 2 keywords helps to narrow the criteria results in a measured way. Repeating keywords in the captions can be repetitive and lack impact.
+
+REVISED (UNIT 4):
+
+**Target:** Given a query, fit card tool should repeat the same caption in 3 of 5 tries.
+
+**Why this target:** 3 of 5 is a valid metric since config.py::TEMPERATURE is set to 0.9 and a higher value gives more variation. The only run where the fit card tool has the same caption would be when the response generated fails to be sent back for some reason if the service is down or the tokens are wasted which would mean tools.py::suggest_outfits would return a generic template of advice "General styling advice for item: Pair with basic neutrals and complementary layers for the outfit". Additionally, it would need 2 tries to have the same caption which is why 3 of 5 is acceptable.
+
+REVISED (UNIT 3):
+**Target**: Given a query the fit card shouldn't repeat the same caption or in other tools the AI should not add unwanted results i.e., invalid listing fields such as a wrong `id`, `title`, or a new field in 3 of 5 tries.
 
 <!-- YOU WRITE THIS ONE.
 
@@ -74,9 +85,19 @@ I picked 3 of 5 since AI noticeably hallucinates and the AI model will forget or
 
 AI is known to repeat hallucinations so criteria 4 ensures the hallucinations are kept to a minimum. In the `create_fit_card` tool the AI has more possibilities of it's results being non-creative without having varied details in prompts as well. There are also 3 tools used in 1 try so hallucinations have a increased chance of occuring.
 
+**Reason for revising Unit 3:** Unit 3 tests two criterias in criteria 4 so I made it one criteria in Unit 4.
+
+**Reason for reivising Unit 4:** Unit 4 had the wrong condition and didn't have a specific enough meaning for what 'same' meant.
 ---
 
-## 5. Your choice
+## 5. Mention wardrobe clothes in outfit
+
+**Target:** Given a query the `suggest_outfits` tool should explicitly mention which clothes are from the wardrobe if a wardrobe is given in 5 of 5 tries.
+
+**Why this target:** The wardrobe items need to be defined so users understand which item the suggested outfit is for and what specific items come from their wardrobe. Additionally, the `wardrobe` part of the outfit should be display every run since a section describing how to display
+ every item is in `tools.py::suggest_outfits` to ensure it is being added there for improvement.
+
+REVISED (UNIT 3):
 
 Given a query the `search_listings` tool should accurately find the size of an item when it is described in the `description` field for size scoring in 3 of 5 tries.
 
@@ -94,6 +115,8 @@ Given a query the `search_listings` tool should accurately find the size of an i
 I picked 3 of 5 since my search will account for keyword sizes described in the description.
 
 The dataset has a good pattern where some clauses can be separated on common phrases such as "says size x but fits like y". This can be indexed. In cases where the size fits "good enough" in the description the cases won't have the `but` keyword or incorrect tags which is also indexable but harder to measure. False positives can occur when a different sizing phrase is used or when the keywords `small`, `medium`, `large`, `extra large`, or `oversized` are used out of the sizing context which should be accounted for in data sets.
+
+**Reason for revising**: Unit 3's criteria 5 is not testable by someone who didn't write the code. The old criteria also talks about search_listings which doesn't have many problems. In testing the criteria with most generation problems is in tools.py::suggest_outfits. I want to ensure that the prompt passes this criteria for the suggest_outfits to display the correct details such as which items are explicitly from the given wardrobe. It is told that it should explicitly mention the given wardrobe already so in order to fix this issue I need to add more information in the prompt to add an improvement.
 
 ---
 
