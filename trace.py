@@ -29,7 +29,7 @@ import config
 
 _lines: list[str] = []
 _step_number = 0
-
+ENABLED = False
 
 def start_trace() -> None:
     """Clear the trace. Call this at the start of each run."""
@@ -61,7 +61,8 @@ def step(name: str, inputs=None, returned=None, note: str = "") -> None:
         line += f"\n      →    {note}"
 
     _lines.append(line)
-    print(line, flush=True)
+    if ENABLED:
+        print(line, flush=True)
 
 
 def get_trace() -> str:

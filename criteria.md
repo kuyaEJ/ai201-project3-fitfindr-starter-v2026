@@ -92,7 +92,7 @@ AI is known to repeat hallucinations so criteria 4 ensures the hallucinations ar
 
 ## 5. Mention wardrobe clothes in outfit
 
-**Target:** Given a query the `suggest_outfits` tool should explicitly mention which clothes are from the wardrobe if a wardrobe is given in 5 of 5 tries.
+**Target:** Given a query the `suggest_outfits` tool should explicitly mention which clothes are from the wardrobe, if a wardrobe is given, in 5 of 5 tries.
 
 **Why this target:** The wardrobe items need to be defined so users understand which item the suggested outfit is for and what specific items come from their wardrobe. Additionally, the `wardrobe` part of the outfit should be display every run since a section describing how to display
  every item is in `tools.py::suggest_outfits` to ensure it is being added there for improvement.

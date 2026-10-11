@@ -110,6 +110,7 @@ def _ask_one(query, wardrobe, use_trace):
 
     if use_trace:
         trace_module.start_trace()
+        trace_module.ENABLED = use_trace
 
     session = run_agent(query, wardrobe)
 

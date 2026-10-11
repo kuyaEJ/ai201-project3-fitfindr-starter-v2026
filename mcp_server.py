@@ -98,6 +98,14 @@ def search_listings(
         and it does not raise - an empty list is the normal way this tool
         says "no"**
     """
+    try:
+        if description == "...": print("Cannot search for empty listing. Try entering an item you want to try in an outfit or look to buy."); raise ValueError("The query cannot be empty");
+        return _search_listings_impl(description, size, max_price)
+    except KeyError as e:
+        print(e)
+    except Exception as e:
+        print(f"Error: An unexpected failure has occured ({type(e).__name__}). What to try: Check your query search, parsing function, api key, or logic.")
+        return []
     return _search_listings_impl(description, size, max_price)
 #
 # ──────────────────────────────────────────────────────────────────────────────

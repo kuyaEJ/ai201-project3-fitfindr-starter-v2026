@@ -68,7 +68,7 @@ This project allows user to inquire on clothes from a set of item listings of di
 
 - **What it does:** When given a thrifted item and the user's wardrobe, suggest one or two outfits.
 - **Inputs:** A `new_item` a listing dict - the item the user is considering, `wardrobe` a wardrobe dict with an `items` key holding the list of items. **It may be empty** . The `new_item` has fields each with an `id` (str), `name` (str), `category` (str), `colors` (list(str)), `style_tags` (list(str)), and `notes` (str or null). The `wardrobe` has these same fields but inside the key `items` array which has a list of dicts.
-- **Returns:** A `response` str of the generated suggestion of 1 or 2 outfits to combine `new_item` (dict) with other items from the user's existing `wardrobe` (dict) which are all pieces in the outfit areexplicitly mentioned. 
+- **Returns:** A `response` str of the generated suggestion of 1 or 2 outfits to combine `new_item` (dict) with other items from the user's existing `wardrobe` (dict). All pieces in the outfit from the wardrobe are explicitly mentioned. 
 - **When it has nothing:** Returns a generated suggestion str, like a personal fashion stylist giving helpful and clear suggestions of at least 2 outfits, otherwise, if the parameters are empty then errors that list is empty and needs to be filled with content from `search_listings`. If generated suggestion fails then returns str of generic advice in `agent.py`'s `session["outfit_suggestion"]` for the `new_item` styling to be paired with neutral basics and complementary layers. 
 
 ### `create_fit_card`
@@ -182,11 +182,24 @@ Just scored these Vintage Levi's 501 Jeans in a sick medium wash on depop for on
 - *What came back:* It provided edge cases and a perspective on testing indicating how there can be errors that happens such as false positives, LLM hallucinations, and empty matches in the `search_listings`, sessions getting modified after being recieved by other tools, and more. It gave me session["error"] example that helped me write errors for empty search results.
 - *What I changed:* As a result I added a check to ensure the right instance is being passed, and the item searches the correct field such as the `listing` field since it has the metadata of the item inside. I asserted the objects identity as well to ensure the fields don't change after being passed to the session before being sent to the next tool `suggest_outfit`.
 
+# Unit 4
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.
      ═══════════════════════════════════════════════════════════════════ -->
-
+## Required Features
+- [x] One tool moved onto MCP. Pick one of your three. Your agent calls it through MCP from then on. The other two stay as they are.
+- [x] Every failure mode triggered on purpose. Three of them, listed in Milestone 2. Each one gets a handler that tells the user what broke and what to try.
+- [x] A trace of one full run. Every tool call in order, with what went in and what came back.
+- [ ] Five tries per criterion. One run isn't a test. Two of your tools call a model, so the same input can give different answers. Your criteria name a target out of five, so five tries is what it takes to score one.
+- [ ] A verdict and a diagnosis for each of your five criteria. Met or missed against the previous unit's target, and for every miss, which tool and which step. "It got it wrong" isn't a diagnosis.
+- [ ] One improvement, made and measured. Change one thing, run the test again, put both results side by side.
+## Stretch Features
+**Unit 4**
+- [ ] A second improvement
+  - [ ] Improved query parse regex
+  - [ ] Improved `tools.py::search_listings` pipeline by ordering steps. Filter, score, sort, and truncate
 ---
 
 ## Run Log — Before
@@ -250,6 +263,16 @@ that produced it:
 ---
 
 ## Loop Trace
+[ **For each loop trace below will not have trace steps unless it is required since there is a unintended bug.** ]
+
+In `trace.py::step` "**flush=True**" which by default is a unintended bug which prints `trace.step` even when the `--trace` argument is not true. 
+
+```print(line, flush=True)``` needs to be in a conditional to not print traces by default.
+```python
+if ENABLED:
+     print(line, flush=True)
+```
+
 
 <!-- One full run, printed step by step, with the MCP call visible in it.
 
@@ -261,24 +284,82 @@ that produced it:
      the same length, your branch isn't working — and this is the fastest way
      anyone will ever find that out. -->
 
-**Happy path**
+**Happy path** Sucessful query and result
+
+✅ A result that works
+
+```zsh
+python app.py ask 'vintage tee'
+  Found:    Vintage Band Tee — Faded Grey — $19.0 on depop
+
+  Outfit:   **Outfit 1: Ultimate Grunge**
+Pair your new Vintage Band Tee (new item) with the baggy dark wash straight-leg jeans (lst_01, bottoms), black combat boots (lst_08, shoes), and layer the vintageblack denim jacket (lst_06, outerwear) on top. Complete the look with the black crossbody bag (lst_10, accessories). 
+
+**Outfit 2: Streetwear Contrast**
+Tuck your new Vintage Band Tee (new item) into the wide-leg khaki trousers (lst_02, bottoms) cinched with the brown leather belt (lst_09, accessories), and finishwith chunky white sneakers (lst_07, shoes) and the black cropped zip hoodie (lst_05, tops) worn unzipped.
+
+  Fit card: Just scored this Vintage Band Tee for only $19.0 on depop and the fade is seriously unmatched. Throw it on with baggy dark wash jeans and chunky combat boots for the ultimate grunge fit. 🤘✨
+
+2 model calls this session, 905 prompt + 210 output tokens
+```
+
+**Empty search.** Failed silently. Should've returned an empty list showing no matches for real lightsaber 
+
+❌ Query something my data cannot possibly have.
+
+```zsh
+py app.py ask 'real lightsaber under $30'
+  Outfit:   **Outfit 1: 90s Streetwear**
+Pair the new bucket hat (plaid side) with the white ribbed tank top (w_003), baggy straight-leg jeans (w_001), vintage black denim jacket (w_006), and chunky white sneakers (w_007). Add the black crossbody bag (w_010) to finish the look.
+      
+**Outfit 2: Casual Earth Tones**
+Wear the new bucket hat (solid tan side) over the oversized grey crewneck sweatshirt (w_004) tucked into the wide-leg khaki trousers (w_002), secured with the brown leather belt (w_009). Ground the fit with the black combat boots (w_008).
+
+  Fit card: Found this 90s streetwear gem on thredUp for just $14.0! I'm totally obsessed with the Bucket Hat — Reversible, Brown Plaid for finishing off baggy denim fits. 🤎
+
+2 model calls this session, 906 prompt + 211 output tokens
 
 ```
 
+**Empty wardrobe.** Failed sucessfully. 
+
+✅ It should return advice, not a crash and not an empty string
+
+```zsh
+py app.py ask '...' --empty-wardrobe
+(running with an empty wardrobe)
+
+  No items matched your search for '...'. Try loosening your price cap, broadening your search terms, or checking for other sizes.
+
+0 model calls this session
 ```
 
-**Empty search**
+**Model unavailable** Failed successfully
+
+✅ The agent should say the model couldn't be reached — not hang, and not show a raw stack trace. 
 
 ```
+py app.py ask 'grey white beanie under $30'
+  Model service unavailable: The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.
 
+1 model calls this session
 ```
 
-**On the MCP move:** <!-- what changed in your code, and whether anything
+**On the MCP move:** 
+The rewire for `search_listings` to `mcp_server.py` worked and went through. There were problems with print lines though if tools.py printed anything but after removing them and it was resolved after ensuring there were no string buffers lingering inside the stream because of either `agent.py` and `tools.py`. The error was caused by `parse_query::agent.py` which did not have good regular expressions and did not have conditional checks on whether  the group() function would work in the code.
+```
+MCPError: Couldn't call 'search_listings' over MCP: unhandled errors in a TaskGroup (1 sub-exception)
+
+Check that mcp_server.py runs on its own first:
+
+    python mcp_server.py
+
+If it exits immediately with an error, fix that before coming back here. 
+```
+<!-- what changed in your code, and whether anything
 behaved differently afterwards. If the rewire didn't work, say exactly where it
 broke — the error text and the last thing that worked. That earns the point in
 full. -->
-
-
 
 ---
 
