@@ -51,22 +51,31 @@ def new_session(query: str, wardrobe: dict) -> dict:
 def parse_query(query: str) -> dict:
     query_lower = query.lower()
     
+    price_pattern = re.compile(r'\$\s*\d+(?:\.\d{2})?')
+    size_pattern = re.compile(
+        r'\b(?:extra\s+small|extra\s+large|small|medium|large|one\s+size|'
+        r'(?:x{1,3}[sl]|[sml]|\d+xl)/(?:x{1,3}[sl]|[sml]|\d+xl)|'
+        r'(?:x{1,3}[sl]|[sml]|\d+xl)|w\d{2})\b', 
+        re.IGNORECASE
+    )
+    
     # Extract max price (e.g., "under $30", "under 30", "max $25")
-    price_match = re.search(r'(?:under|below|max|\$)\s*\$?(\d+(?:\.\d+)?)', query_lower)
-    max_price = float(price_match.group(1)) if price_match else 0.0
-
+    price_match = re.search(price_pattern, query_lower)
+    price_match = price_match.group() if price_match else None
+    price_match = price_match.replace("$", "").strip() if price_match else None
+    max_price = float(price_match) if price_match else None
+    
     # Extract common clothing sizes
-    size_match = re.search(r'\b(xxs|xs|s|m|l|xl|xxl|w\d{2})\b', query_lower)
-    size = size_match.group(1).upper() if size_match else ""
-
+    size_match = re.search(size_pattern, query_lower)
+    size = size_match.group() if size_match else ""
     # Clean description by stripping price and size patterns
     desc = query_lower
     if price_match:
-        desc = desc.replace(price_match.group(0), "")
+        desc = desc.replace("$", "")
+        desc = desc.replace(price_match, "")
     if size_match:
         desc = desc.replace(size_match.group(0), "")
     desc = re.sub(r'\b(under|below|size|max)\b', '', desc).strip()
-
     return {
         "description": desc,
         "size": size,
@@ -153,6 +162,13 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         size_filter = session["parsed"].get("size")
         max_price = session["parsed"].get("max_price")
 
+        if not search_query:
+            session["error"] = (
+                f"No items matching search for empty query"
+                f"\nPlease enter a non-empty search requirement"
+            )
+            return session
+        
         from mcp_client import call_tool
         results = call_tool("search_listings", {
             "description": search_query,
@@ -160,12 +176,6 @@ def run_agent(query: str, wardrobe: dict) -> dict:
             "max_price": max_price,
         })
 
-        if not search_query:
-            session["error"] = (
-                f"No items matching search for empty query"
-                f"\nPlease enter a non-empty search requirement"
-            )
-            return session
 
         session["search_results"] = results
         
