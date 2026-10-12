@@ -23,8 +23,7 @@ the description has to say what is *in* the list.
 import config  # noqa: F401 — you'll use this in search_listings
 from generate import generate
 from utils.data_loader import load_listings
-import keywordScore
-import re
+import keywordScore, re, math
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
 
@@ -74,8 +73,18 @@ def find_size_in_text(text: str, category: dict) -> str | None:
         "small":"s",
         "medium":"m",
         "large":"l",
-        "oversized":"os",
-        "one size":"os",
+        "extralarge":"x;",
+        "oversized / one size":"os",
+        "27":"w27",
+        "28":"w28",
+        "29":"w29",
+        "30":"w30 l30",
+        "32":"w32",
+        "us 7":"us 7",
+        "us 8":"us 8",
+        "us 8.5":"us 8.5",
+        "us 9":"us 9",
+        "uk size 5":"us 7"
     }
     if not text:
         return None
@@ -97,7 +106,7 @@ def extract_fit_size(description: str, category: dict) -> str | None:
         return None
 
     FIT_TRIGGER_PATTERN = re.compile(
-        r'\b(fits?\s+(like\s+a\s+|like\s+)?|cut\s+(more\s+like\s+a\s+|more\s+like\s+|like\s+a\s+|like\s+)?|sold\s+as\s+(a\s+)?|tag\s+says\s+)',
+        r'\b(fits?\s+(like\s+a\s+|like\s+)?|cut\s+(more\s+like\s+a\s+|more\s+like\s+|like\s+a\s+|like\s+)?|sold\s+as\s+(a\s+)?|tag\s+says\s+)|(\s)+size\s',
         re.IGNORECASE
     )
 
@@ -230,12 +239,22 @@ def search_listings(
     """
     # TODO: replace this with your implementation
     # If max price is 0 returns empty list since no items will be $0
-    if max_price is not None:
-        if max_price <= 0: return []
-
-    BM25SearchEngine = keywordScore.BM25SearchEngine
+    scoreOnPrice = False
+    scoreOnSize = False
     listings = load_listings()
     if not listings: return []
+    # If other parameters are found use scoring
+    if max_price is not None:
+        if max_price <= 0: return [];
+        else: 
+            listings = list(filter(lambda x: x.get('price') <= max_price, listings))
+            scoreOnPrice = True;
+    if size is not None:
+        if size.lower() in SIZE_ORDER or size.lower() in {"small", "medium", "large", "extra large", "one size", "extra large", "oversized"}:
+            listings = list(filter(lambda x: x.get('size').find(size), listings))
+            scoreOnSize = True
+
+    BM25SearchEngine = keywordScore.BM25SearchEngine
 
     # B. Calculate Text Relevance Scores using BM25 Engine
     engine = BM25SearchEngine(listings)
@@ -247,26 +266,28 @@ def search_listings(
     for idx, listing in enumerate(listings):
         score = 0
 
+        base_text_score = 0
+        if text_scores:
+            base_text_score = text_scores[idx]
+
+        if description and base_text_score <= 0: continue
+
         price_score = 0
-        if max_price != None:
+        if max_price is not None and scoreOnPrice:
             item_price = listing.get('price')
             # Check price and skip if it is above max_price
             if item_price > max_price: continue;
             # Lower prices get higher scores
-            price_score = .5 * (max_price / item_price);
+            price_score = max(.05 * (max_price / item_price), 0.5); # Max score is 0.5 or max_price * .05 
         
         size_score = 0
-        if size is not None:
+        if size is not None and scoreOnSize:
             item_desc = listing.get('description')
             item_category = listing.get('category')
             c = CATEGORY_SIZE_TOKENS.get(item_category)
             target_size = size if size else extract_fit_size(item_desc, c)
         
             size_score = scoreSize(c, listing, target_size)
-
-        base_text_score = 0
-        if text_scores:
-            base_text_score = text_scores[idx]
 
         score = base_text_score + size_score + price_score
 
