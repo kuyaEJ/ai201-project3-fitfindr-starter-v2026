@@ -58,9 +58,7 @@ works with a direct call, and **a documented failure earns the point in full.**
 """
 
 from mcp.server.fastmcp import FastMCP
-from typing import Optional
 from tools import search_listings as _search_listings_impl  # noqa: F401 — you'll use this below
-import sys
 # log_level="WARNING" keeps the server from printing an INFO line for every
 # request. Without it your terminal fills with "Processing request of type
 # CallToolRequest" and the output you actually care about scrolls away.
@@ -72,8 +70,8 @@ mcp = FastMCP("fitfindr", log_level="WARNING")
 @mcp.tool()
 def search_listings(
     description: str,
-    size: str | Optional[str] = None,
-    max_price: float | Optional[float] = None,
+    size: str | None = None,
+    max_price: float | None = None,
 ) -> list[dict]:
     """
     Searches listings and returns matches
@@ -99,7 +97,6 @@ def search_listings(
         says "no"**
     """
     try:
-        sys.stderr.write(f"\n[MCP SERVER] Received -> desc: {repr(description)}, size: {repr(size)}, max_price: {repr(max_price)}\n")
         if description == "..." or description is None or description == "": print("Cannot search for empty listing. Try entering an item you want to try in an outfit or look to buy."); raise ValueError("The description cannot be empty. Try broadening your search query. ");
         return _search_listings_impl(description, size, max_price)
     except KeyError as e:
