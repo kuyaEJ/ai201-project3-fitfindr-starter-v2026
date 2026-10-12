@@ -194,12 +194,12 @@ Just scored these Vintage Levi's 501 Jeans in a sick medium wash on depop for on
 - [x] A trace of one full run. Every tool call in order, with what went in and what came back.
 - [ ] Five tries per criterion. One run isn't a test. Two of your tools call a model, so the same input can give different answers. Your criteria name a target out of five, so five tries is what it takes to score one.
 - [ ] A verdict and a diagnosis for each of your five criteria. Met or missed against the previous unit's target, and for every miss, which tool and which step. "It got it wrong" isn't a diagnosis.
-- [ ] One improvement, made and measured. Change one thing, run the test again, put both results side by side.
+- [x] One improvement, made and measured. Change one thing, run the test again, put both results side by side.
+  - [x] Improved query parse regex
 ## Stretch Features
 **Unit 4**
-- [ ] A second improvement
-  - [ ] Improved query parse regex
-  - [ ] Improved `tools.py::search_listings` pipeline by ordering steps. Filter, score, sort, and truncate
+- [x] A second improvement
+  - [x] Improved `tools.py::search_listings` pipeline by ordering steps. Filter, score, sort, and truncate
 
 ---
 
@@ -495,6 +495,7 @@ If the algorithm and step by step process of finding listings is bad then the AI
 
 Additionally, having an AI model do all of the work isn't always the correct solution either. In `suggest_outfits` AI model generation should be smaller compared to `create_fit_card`. The AI implementation for the `suggest_outfits` tool increases the risk of hallucination. Having minimal AI usage and more code solutions allows the tool to produce accurate results.
 
+Items the listings definitely don't have are allowed through `search_listings` instead of failing properly. Not only does the query not filter well it also does not fail properly.
 
 ---
 
