@@ -200,6 +200,7 @@ Just scored these Vintage Levi's 501 Jeans in a sick medium wash on depop for on
 - [ ] A second improvement
   - [ ] Improved query parse regex
   - [ ] Improved `tools.py::search_listings` pipeline by ordering steps. Filter, score, sort, and truncate
+
 ---
 
 ## Run Log — Before
@@ -215,17 +216,247 @@ Just scored these Vintage Levi's 501 Jeans in a sick medium wash on depop for on
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. matching query completes | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. impossible query stops early | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| empty wardrobe _(diagnostic — not one of your five)_ | None | PASS | FAIL | PASS | PASS |  PASS | (4/5) |
+| 3. tool equals session metadata check | 3 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. unqiue fit card caption | 3 of 5 | FAIL | FAIL | FAIL | FAIL | FAIL | MISSED (0/5) |
+| 5. mention wardrobe clothes in outfit | 5 of 5 | FAIL | FAIL | FAIL | FAIL | FAIL | MISSED (0/5) |
 
-**Real output from one try**, pasted as text, naming the file and function
-that produced it:
+**Real output from one try**, pasted as text, naming the file and function that produced it. Has real ouput for each criterion from one try:
+
+file: `run_2026-10-11_1644_before.md` produced by: `app.py::run_agent`
+
+### matching query completes
+
+- Query: `vintage graphic tee under $30`
+- Wardrobe: example
+
+**Try 1**
+
+- stopped early: no
+- selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+- search_results: 10
+
+Outfit suggestion:
 
 ```
+**Outfit 1: Y2K Streetwear**
+Pair your new Y2K Baby Tee (New Item) with the Baggy straight-leg jeans, dark wash (lst_019), layered under the Black cropped zip hoodie (lst_023). Finish the look with the Chunky white sneakers (lst_025) and Black crossbody bag (lst_028).
 
+**Outfit 2: Casual Grunge**
+Combine the Y2K Baby Tee (New Item) with the Wide-leg khaki trousers (lst_020) secured by the Brown leather belt (lst_027). Throw on the Vintage black denim jacket (lst_024) and step into the Black combat boots (lst_026) to complete the vibe.
+```
+
+Fit card:
+
+```
+Scored this Y2K Baby Tee — Butterfly Print on depop for just $18.0 in pristine condition. 🦋 I'm styling it with baggy jeans and a zip hoodie for the ultimate Y2K streetwear fit. Such a good vintage graphic find!
+```
+
+Trace:
+
+```
+[1] parse_query
+      in:  dict with keys: query
+      out: dict with keys: description, size, max_price
+[2] search_listings
+      in:  dict with keys: query, size_filter, max_price
+      out: Found 10 items
+[3] select_item
+      in:  dict with keys: results_count
+      out: Y2K Baby Tee — Butterfly Print ($18.0, S/M, depop)
+[4] suggest_outfit
+      in:  dict with keys: item_id
+      out: **Outfit 1: Y2K Streetwear** Pair your new Y2K Bab...
+[5] create_fit_card
+      in:  dict with keys: item_id
+      out: Scored this Y2K Baby Tee — Butterfly Print on depo...
+```
+
+### impossible query stops early
+
+- Query: `designer ballgown size XXS under $5`
+- Wardrobe: example
+
+**Try 1**
+
+- stopped early: yes — No items matched your search for 'designer ballgown' in size XXS under $5.00. Try loosening your price cap, broadening your search terms, or checking for other sizes.
+- selected_item: (none)
+- search_results: 0
+
+Trace:
+
+```
+[1] parse_query
+      in:  dict with keys: query
+      out: dict with keys: description, size, max_price
+[2] search_listings
+      in:  dict with keys: query, size_filter, max_price
+      out: Found 0 items
+```
+
+### empty wardrobe
+
+- Query: `denim jacket under $50`
+- Wardrobe: empty
+
+**Try 1**
+
+- stopped early: no
+- selected_item: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+- search_results: 10
+
+Outfit suggestion:
+
+```
+Pair this light wash cropped denim jacket (w_001) with high-waisted black wide-leg trousers (non-wardrobe) and a fitted white crop top (non-wardrobe) for an effortless streetwear contrast. Finish with chunky retro sneakers (non-wardrobe) and a minimalist black shoulder bag (non-wardrobe). 
+
+Alternatively, layer the jacket (w_001) over a floral midi slip dress (non-wardrobe) to lean into a vintage, textured aesthetic. Complete this look with strappy leather sandals (non-wardrobe) and delicate silver hoop earrings (non-wardrobe).
+```
+
+Fit card:
+
+```
+Just scored this vintage Denim Jacket — Light Wash, Cropped for $42.0 on Poshmark! Throw it on with high-waisted black wide-leg trousers and a fitted white crop top for the ultimate streetwear contrast. 🤌✨
+```
+
+Trace:
+
+```
+[1] parse_query
+      in:  dict with keys: query
+      out: dict with keys: description, size, max_price
+[2] search_listings
+      in:  dict with keys: query, size_filter, max_price
+      out: Found 10 items
+[3] select_item
+      in:  dict with keys: results_count
+      out: Denim Jacket — Light Wash, Cropped ($42.0, S, poshmark)
+[4] suggest_outfit
+      in:  dict with keys: item_id
+      out: Pair this light wash cropped denim jacket (w_001) ...
+[5] create_fit_card
+      in:  dict with keys: item_id
+      out: Just scored this vintage Denim Jacket — Light Wash...
+```
+
+### tool equals session metadata check
+
+- Query: `white polo golf shirt under $20`
+- Wardrobe: example
+
+**Try 1**
+
+- stopped early: no
+- selected_item: Vintage Polo Shirt — Forest Green ($18.0, thredUp)
+- search_results: 10
+
+Outfit suggestion:
+
+```
+**Outfit 1: Streetwear Prep**
+Pair the Vintage Polo Shirt (NEW ITEM) with the baggy straight-leg jeans (lst_019), brown leather belt (lst_027), and chunky white sneakers (lst_025). Layer the vintage black denim jacket (lst_024) on top for a sharp, textured contrast. 
+
+**Outfit 2: Minimal Earth Tones**
+Tuck the Vintage Polo Shirt (NEW ITEM) into the wide-leg khaki trousers (lst_020) secured with the brown leather belt (lst_027), and finish with the black combat boots (lst_026) and black crossbody bag (lst_028) for an effortless, grounded look.
+```
+
+Fit card:
+
+```
+Just snagged this Vintage Polo Shirt in forest green for only $18.0 on thredUp and the preppy earth-tone vibe is unmatched. 
+
+Throw it on with some baggy denim and a black jacket for an easy streetwear look, or tuck it into wide-leg trousers with chunky boots. 🌿✨
+```
+
+Trace:
+
+```
+[1] parse_query
+      in:  dict with keys: query
+      out: dict with keys: description, size, max_price
+[2] search_listings
+      in:  dict with keys: query, size_filter, max_price
+      out: Found 10 items
+[3] select_item
+      in:  dict with keys: results_count
+      out: Vintage Polo Shirt — Forest Green ($18.0, M, thredUp)
+[4] suggest_outfit
+      in:  dict with keys: item_id
+      out: **Outfit 1: Streetwear Prep** Pair the Vintage Pol...
+[5] create_fit_card
+      in:  dict with keys: item_id
+      out: Just snagged this Vintage Polo Shirt in forest gre...
+```
+
+### unqiue fit card caption
+
+- Query: `90s track jacket in size M`
+- Wardrobe: example
+
+**Try 1**
+
+- stopped early: yes — No items matched your search for '90s track jacket in' in size M. Try loosening your price cap, broadening your search terms, or checking for other sizes.
+- selected_item: (none)
+- search_results: 0
+
+Trace:
+
+```
+[1] parse_query
+      in:  dict with keys: query
+      out: dict with keys: description, size, max_price
+[2] search_listings
+      in:  dict with keys: query, size_filter, max_price
+      out: Found 0 items
+```
+
+### mention wardrobe clothes in outfit
+
+- Query: `silk slip dress in midi length under $40`
+- Wardrobe: example
+
+**Try 1**
+
+- stopped early: no
+- selected_item: 90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+- search_results: 10
+
+Outfit suggestion:
+
+```
+**Outfit 1: 90s Grunge**
+Layer the new 90s Floral Slip Dress (new item) over the White ribbed tank top (w_003), and pair with the Black combat boots (w_008) and Vintage black denim jacket (w_006). Complete the look using the Black crossbody bag (w_010).
+
+**Outfit 2: Streetwear Contrast**
+Throw the Oversized grey crewneck sweatshirt (w_004) directly over the 90s Floral Slip Dress (new item) to wear it as a skirt, and finish with the Chunky white sneakers (w_007) and Black crossbody bag (w_010).
+```
+
+Fit card:
+
+```
+Just snagged this 90s Silk Slip Dress — Floral, Midi Length on depop for literally $30.0 and I'm obsessed. Style it 90s grunge over a ribbed tank with combat boots, or throw an oversized crewneck right over it to wear it as a skirt. 🌱✨
+```
+
+Trace:
+
+```
+[1] parse_query
+      in:  dict with keys: query
+      out: dict with keys: description, size, max_price
+[2] search_listings
+      in:  dict with keys: query, size_filter, max_price
+      out: Found 10 items
+[3] select_item
+      in:  dict with keys: results_count
+      out: 90s Silk Slip Dress — Floral, Midi Length ($30.0, M, depop)
+[4] suggest_outfit
+      in:  dict with keys: item_id
+      out: **Outfit 1: 90s Grunge** Layer the new 90s Floral ...
+[5] create_fit_card
+      in:  dict with keys: item_id
+      out: Just snagged this 90s Silk Slip Dress — Floral, Mi...
 ```
 
 ---
@@ -250,14 +481,19 @@ that produced it:
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | matching query completes | 4 of 5 | MET | Each try did not miss the criteria at all. The agent completely goes through all three tools: `search_listings`, `suggest_outfit`, and `create_fit_card` which also matches a listing and returns a outfit card. |
+| 2 | impossible query stops early | 5 of 5 | MET | Each try with the impossible query stops. None give `suggest_outfits` a listing and the agent stops. The `selected_item` is always (none) and `search_results` is 0 in all 5 tries. |
+| 3 | tool equals session metadata check | 3 of 5 | MET | Each try meets the criteria. In `agent.py::run_agent` the agent saves the session metadata before passing and after passing to `suggest_outfits` to compare them which would fail if it didn't equal the same. The `out` also ends up being the same in the trace step for `select_item` and for `suggest_outfit`. |
+| 4 | unqiue fit card caption | 3 of 5 | MISSED | Every try failed the criteria so it didn't meet even the minimum number of passes. This is because the search stopped early due to no items matching search. <br/>**Step failed:** `agent.py::search_listings` tool <br/>**Mechanism it failed in:** inside a helper tool `parse_query`. <br/><br/> It doesn't properly validate strings it can and it cannot find in listings before giving the strings to `search_listings`. The criteria didn't have the chance to be evaluated because it never reached the step for `agent.py::create_fit_card`. |
+| 5 | mention wardrobe clothes in outfit | 5 of 5 | MISSED | Every try failed the criteria so it didn't meet even the minimum number of passes. <br/>**Step failed:** `agent.py::suggest_outfits` tool <br/>**Mechanism it failed in:** inside the AI `prompt` instructions where the response was made and generated. <br/><br/> The criteria failed silently. Wardrobe items need to be explicitly identified which didn't happen for any of these tries. This is strange since in the empty wardrobe disagnostic it indicated which items were not in the wardrobe, opposite of what it was supposed to do. <br/> <br/> Criteria 1 - try 5 and the 5 diagnostic runs (empty wardrobe) and only the 1 of 25 tries in criteria 1 had some form of information about the wardrobe being empty or the clothes coming from the wardrobe. <br/> <br/>This error can come from information or instructions missing from the generated prompt indicating the model can be overloaded and be skipping over instructions.<br/> <br/> Possible solutions may be that `suggest_outfits` may need to lower what it asks the model to do and generate. By asking for only item ids to be generated then returned we reduce the risk of AI hallucinations. By checking what is in the wardrobe ourselves and what to print we can improve the answer to meet the criteria. Additionally, adding more instructions may also add more priority to explicitly mentioning if the items are from the wardrobe but would probably contribute to more AI hallucinations. |
 
 **Diagnoses**
 
+We cannot test a tool if we cannot even get to it. The foundation of this agent is `search_listings`. The way the asked or searched query is handled, split, parsed, and distributed matters before anything else.
+
+If the algorithm and step by step process of finding listings is bad then the AI model cannot hope to be accurate or find a valid listing.
+
+Additionally, having an AI model do all of the work isn't always the correct solution either. In `suggest_outfits` AI model generation should be smaller compared to `create_fit_card`. The AI implementation for the `suggest_outfits` tool increases the risk of hallucination. Having minimal AI usage and more code solutions allows the tool to produce accurate results.
 
 
 ---
@@ -346,7 +582,7 @@ py app.py ask 'grey white beanie under $30'
 ```
 
 **On the MCP move:** 
-The rewire for `search_listings` to `mcp_server.py` worked and went through. There were problems with print lines though if tools.py printed anything but after removing them and it was resolved after ensuring there were no string buffers lingering inside the stream because of either `agent.py` and `tools.py`. The error was caused by `parse_query::agent.py` which did not have good regular expressions and did not have conditional checks on whether  the group() function would work in the code.
+The rewire for `search_listings` to `mcp_server.py` worked and went through. There were problems with print lines though if tools.py printed anything but after removing them and it was resolved after ensuring there were no string buffers lingering inside the stream because of either `agent.py` and `tools.py`. The error was caused by `parse_query::agent.py` which did not have good regular expressions and did not have conditional checks on whether the group() function would work in the code. Additionally, `mcp_server.py` got handlers
 ```
 MCPError: Couldn't call 'search_listings' over MCP: unhandled errors in a TaskGroup (1 sub-exception)
 
