@@ -61,13 +61,13 @@ def parse_query(query: str) -> dict:
     
     # Extract max price (e.g., "under $30", "under 30", "max $25")
     price_match = re.search(price_pattern, query_lower)
-    price_match = price_match.group() if price_match else None
-    price_match = price_match.replace("$", "").strip() if price_match else None
+    price_match = price_match.group() if price_match else 0.0
+    price_match = price_match.replace("$", "").strip() if price_match else 0.0
     max_price = float(price_match) if price_match else None
     
     # Extract common clothing sizes
     size_match = re.search(size_pattern, query_lower)
-    size = size_match.group() if size_match else ""
+    size = size_match.group().strip() if size_match else ""
     # Clean description by stripping price and size patterns
     desc = query_lower
     if price_match:
@@ -75,7 +75,7 @@ def parse_query(query: str) -> dict:
         desc = desc.replace(price_match, "")
     if size_match:
         desc = desc.replace(size_match.group(0), "")
-    desc = re.sub(r'\b(under|below|size|max)\b', '', desc).strip()
+    desc = re.sub(r'\b(in|under|below|size|max)\b', '', desc).strip()
     return {
         "description": desc,
         "size": size,
@@ -161,7 +161,6 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         search_query = session["parsed"].get("description")
         size_filter = session["parsed"].get("size")
         max_price = session["parsed"].get("max_price")
-
         if not search_query:
             session["error"] = (
                 f"No items matching search for empty query"
@@ -178,7 +177,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
 
         session["search_results"] = results
-        
+
         trace.step(
             "search_listings", 
             inputs={"query": search_query, "size_filter": size_filter, "max_price": max_price}, 
@@ -187,7 +186,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
         # Step 4: THE BRANCH (Guard against empty search results)
         if not results:
-            price_msg = f" under ${max_price:.2f}" if max_price > 0 else ""
+            price_msg = f" under ${max_price:.2f}" if max_price is not None else ""
             size_msg = f" in size {size_filter}" if size_filter else ""
             session["error"] = (
                 f"No items matched your search for '{search_query}'{size_msg}{price_msg}. "
