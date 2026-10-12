@@ -35,6 +35,24 @@ SCENARIOS = [
         "wardrobe": "empty",
         "criterion": None,
     },
+    {
+        "name": "tool equals session metadata check",
+        "query": "white polo golf shirt under $20",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    {
+        "name": "unqiue fit card caption",
+        "query":"90s track jacket in size M",
+        "wardrobe":"example",
+        "criterion": 4,
+    },
+    {
+        "name": "mention wardrobe clothes in outfit",
+        "query":"silk slip dress in midi length under $40",
+        "wardrobe":"example",
+        "criterion": 5,
+    }
     # TODO: add what your criteria 3, 4 and 5 need.
     #
     # Set "criterion" to the number in criteria.md that the scenario tests.
