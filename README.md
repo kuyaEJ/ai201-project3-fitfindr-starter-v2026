@@ -182,6 +182,18 @@ Just scored these Vintage Levi's 501 Jeans in a sick medium wash on depop for on
 - *What came back:* It provided edge cases and a perspective on testing indicating how there can be errors that happens such as false positives, LLM hallucinations, and empty matches in the `search_listings`, sessions getting modified after being recieved by other tools, and more. It gave me session["error"] example that helped me write errors for empty search results.
 - *What I changed:* As a result I added a check to ensure the right instance is being passed, and the item searches the correct field such as the `listing` field since it has the metadata of the item inside. I asserted the objects identity as well to ensure the fields don't change after being passed to the session before being sent to the next tool `suggest_outfit`.
 
+**Moment 3:**
+
+- *What I asked for:* I asked Gemini to help me debug my errors in `parse_query` with MCP through a prompt by prompt process.
+- *What came back:* It asked me to check the validations that can fail due to missing keywords like `under`, `in`, `size 7` and etc.
+- *What I changed:* I already had the keywords but checked each one the model recommended to fully explore what the issue was. The AI model suggested the None type being compared to int should be different and I noticed I got the error since I changed the else from setting max_price from 0 to None. Afterwards I wanted None to still be there so I change the condition from max_price >= 0 to max_price is not None instead.
+
+**Moment 4:**
+
+- *What I asked for:* I asked Gemini to explain why order matters when going through `search_listings` filter, score, sort, and truncate.
+- *What came back:* It explained that it prevents the scope from scoring every item in the listing and ensured only the best items were shown.
+- *What I changed:* I ended up following the advice making `search_listings` filter first before scoring the filtered list. Then the scored list was sorted and finally returning the best ten scores.
+
 # Unit 4
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
@@ -192,14 +204,14 @@ Just scored these Vintage Levi's 501 Jeans in a sick medium wash on depop for on
 - [x] One tool moved onto MCP. Pick one of your three. Your agent calls it through MCP from then on. The other two stay as they are.
 - [x] Every failure mode triggered on purpose. Three of them, listed in Milestone 2. Each one gets a handler that tells the user what broke and what to try.
 - [x] A trace of one full run. Every tool call in order, with what went in and what came back.
-- [ ] Five tries per criterion. One run isn't a test. Two of your tools call a model, so the same input can give different answers. Your criteria name a target out of five, so five tries is what it takes to score one.
-- [ ] A verdict and a diagnosis for each of your five criteria. Met or missed against the previous unit's target, and for every miss, which tool and which step. "It got it wrong" isn't a diagnosis.
+- [x] Five tries per criterion. One run isn't a test. Two of your tools call a model, so the same input can give different answers. Your criteria name a target out of five, so five tries is what it takes to score one.
+- [x] A verdict and a diagnosis for each of your five criteria. Met or missed against the previous unit's target, and for every miss, which tool and which step. "It got it wrong" isn't a diagnosis.
 - [x] One improvement, made and measured. Change one thing, run the test again, put both results side by side.
   - [x] Improved query parse regex
 ## Stretch Features
 **Unit 4**
 - [x] A second improvement
-  - [x] Improved `tools.py::search_listings` pipeline by ordering steps. Filter, score, sort, and truncate
+  - [x] Improved `tools.py::search_listings` pipeline by fixing the ordering of steps. Performed filter, score, sort, and truncate in order to ensure tool properly returns the correct results.
 
 ---
 
@@ -608,21 +620,33 @@ full. -->
      `python run_eval.py --label after` -->
 
 **What I changed:**
+I changed `agent.py::parse_query` in the price_match else condition to return None instead of 0 so that the query does not return empty list by mistake. I also added some extra regular expression formulas to increase the scope of queries it answers.
 
-**Which failure it was meant to fix:**
+**Which failure it was meant to fix:** I intended for this to fix criteria 1 translating to other queries and criterias. Some runs were ending too early and didn't finish through to the final tool.
 
 ### Run Log — After
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. matching query completes | 4 of 5 | PASS | FAIL | PASS | PASS | FAIL | MISSED (3/5) |
+| 2. impossible query stops early | 5 of 5 | PASS | PASS | PASS |  PASS | PASS | MET (5/5) |
+| empty wardrobe _(diagnostic — not one of your five)_ | None | PASS | PASS | FAIL | FAIL | FAIL | (2/5) |
+| 3. tool equals session metadata check | 3 of 5 | PASS | PASS | PASS | PASS | FAIL | MET (4/5) |
+| 4. unique fit card caption | 3 of 5 | PASS | PASS | FAIL | FAIL | PASS | MET (3/5) |
+| 5. mention wardrobe clothes in outfit | 5 of 5 | FAIL | FAIL | FAIL | FAIL | FAIL | MISSED (0/5) |
 
 **Did it help, and how do I know:**
+The regular expressions and `price_match` in `agent.py` not being zero helped for criteria 4 which had no price provided in the query `90s track jacket in size M` making the query fail and return an empty list.
 
+**I know it helped** since criteria 4 entirely missed in the before log the last time.
+
+It did seem to make things worse in criteria 1 missing two runs, empty wardrobe having one less PASS, criteria 3 missed 1 run, and criteria 5 still missed all runs. 
+
+However, these missed runs were due to Gemini having code 503 temporary increased spikes in demand or a 500 internal error. 
+
+The empty wardrobe has one less PASS due to AI hallucination but the other 2 were because of code 503 meaning some misses might not be the fault of the system.
+
+Only criteria 5 did not have any temporary error codes still failing. This is consistent with before since I haven't added a fix for it yet since adding a full solution for using less AI to generate suggested outfits would take longer to do.
 <!-- If it made things worse, say that. Honestly reported, that earns full
      credit and is more interesting than one that worked. -->
 
@@ -631,6 +655,11 @@ full. -->
 ---
 
 ## What's Still Broken
+Therefore, `suggest_outfits` explicitly mentioning wardrobes in criteria 5 `tools.py` is still broken. It only sort of works for empty wardrobe and very rarely works for non empty wardrobes. This would also fix empty wardrobe criteria as well preventing AI hallucinations by ensuring local code will update.
+
+**Criteria 1:** What I'd do is simply re-run `run_eval.py` at a better time so Gemini doesn't hit any limits. Criteria 1 failed because it had to stop waiting for a response, otherwise, it would completely run through all three tools especially when given the same query.
+
+**Criteria 5:** What I'd do is create a different `suggest_outfits` implementation of the AI model. I'd handle strings to display what items are in the wardrobe or not and determine whether the item chosen by the AI model is in the list. This tool doesn't need more variance in comparison to `create_fit_card`.
 
 <!-- For each criterion still missed: what you'd do, and why you stopped where
      you did. "I ran out of time" is fine if it's true. Pretending nothing is
