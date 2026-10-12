@@ -605,6 +605,9 @@ Check that mcp_server.py runs on its own first:
 
 If it exits immediately with an error, fix that before coming back here. 
 ```
+
+After I changed to the MCP call instead of the tool the code began to show different errors with MCP labels. After I made changes and ran `py run_eval.py --label after` the project didn't cause issues. It is a little harder to debug when MCP prints a trace since it doesn't show the log of which line or function caused an error in the code. Other than that there wasn't many MCP bugs other than print statements that were messing up what it display in the stream. It is hard to replicate it though right now.
+
 <!-- what changed in your code, and whether anything
 behaved differently afterwards. If the rewire didn't work, say exactly where it
 broke — the error text and the last thing that worked. That earns the point in
