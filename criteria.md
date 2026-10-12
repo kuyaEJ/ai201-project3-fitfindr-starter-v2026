@@ -26,8 +26,7 @@ I am confident in my keyword matches and logic for the agent to complete 3 tool 
 
 ## 2. An impossible query stops before the second tool
 
-Given a query that matches no listings, the agent stops before calling
-`suggest_outfit` and returns a message naming what to change — 5 of 5 tries.
+Given a query that matches no listings, the agent stops before calling `suggest_outfit` and returns a message naming what to change — 5 of 5 tries.
 
 **Why this target:**
 

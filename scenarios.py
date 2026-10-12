@@ -42,7 +42,7 @@ SCENARIOS = [
         "criterion": 3,
     },
     {
-        "name": "unqiue fit card caption",
+        "name": "unique fit card caption",
         "query":"90s track jacket in size M",
         "wardrobe":"example",
         "criterion": 4,
